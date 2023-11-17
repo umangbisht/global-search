@@ -87,7 +87,7 @@ def make_file_index():
         #         es.index(index=filename, body=document, id=idx)
             actions = [
                 {
-                    # "_op_type": "index",
+                    "_op_type":filename,
                     "_index": filename,
                     "_source": document,
                 }
