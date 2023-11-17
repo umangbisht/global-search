@@ -1,8 +1,8 @@
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, helpers
 import json
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from elasticsearch.helpers import bulk
+# from elasticsearch.helpers import bulk
 
 app = Flask(__name__)
 CORS(app)
@@ -36,7 +36,8 @@ def get_search_data():
                 "type": "phrase",
              
             }
-        }
+        },
+        "size": 50,
     }
     # Print the query for debugging
 
@@ -69,21 +70,32 @@ def make_file_index():
         return jsonify({'error': 'No selected file'})
 
     # Save the uploaded file to a designated folder
-    file.save('../datastore/' + filename)
+    file.save('./datastore/' + filename)
     
     # Check if the index already filename
     if es.indices.exists(index=filename):
         response = {"message": f"Index '{filename}' already exists."}
         return jsonify([response])
     # Indexing JSON data
-    json_file_path = '../datastore/'+filename
+    json_file_path = './datastore/'+filename
 
     try:
         with open(json_file_path, 'r') as json_file:
             data = json.load(json_file)
-            # Index each document from the JSON file
-            for idx, document in enumerate(data):
-                es.index(index=filename, body=document, id=idx)
+        #     # Index each document from the JSON file
+        #     for idx, document in enumerate(data):
+        #         es.index(index=filename, body=document, id=idx)
+            actions = [
+                {
+                    # "_op_type": "index",
+                    "_index": filename,
+                    "_source": document,
+                }
+                for document in data
+            ]
+
+            # Use the helpers.bulk() method for bulk indexing
+            helpers.bulk(es, actions)
             response = {"message":"Index created successfully!"}
             return jsonify([response])
     except Exception as e:
