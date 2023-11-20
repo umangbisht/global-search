@@ -30,6 +30,9 @@ def get_search_data():
 
     # Generate the search query
     query = {
+        "_source":[],
+        "min_score":0.5,
+        "size": 500,
         "query": {
             "multi_match": {
                 "query": search_query,
@@ -37,7 +40,7 @@ def get_search_data():
              
             }
         },
-        "size": 50,
+        
     }
     # Print the query for debugging
 
@@ -103,14 +106,16 @@ def make_file_index():
                 success, failed = helpers.bulk(es, actions, raise_on_error=False)
                 print(f"Successfully indexed: {success} documents")
                 print(f"Failed to index: {failed} documents")
+                response = {"message": f"Successfully indexed: {success} documents"}
+                return jsonify([response])
                 
-                if failed:
-                    for item in failed:
-                        print(f"Indexing error: {item['index']['error']}")
+                # if failed:
+                #     for item in failed:
+                #         response = {"message": f"Indexing error: {item['index']['error']}"}
+                #         return jsonify([response])
+                        
             except Exception as e:
                 print(f"Error during bulk indexing: {e}")
-            # response = {"message":"Index created successfully!"}
-            # return jsonify([response])
     except Exception as e:
 
         return str(e)
