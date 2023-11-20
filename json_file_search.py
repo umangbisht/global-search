@@ -71,6 +71,8 @@ def make_file_index():
 
     # Save the uploaded file to a designated folder
     file.save('./datastore/' + filename)
+    print('./datastore/' + filename)
+    print("file successfully saved")
     
     # Check if the index already filename
     if es.indices.exists(index=filename):
@@ -87,17 +89,27 @@ def make_file_index():
         #         es.index(index=filename, body=document, id=idx)
             actions = [
                 {
-                    "_op_type":filename,
+                    "_op_type":"index",
                     "_index": filename,
                     "_source": document,
                 }
                 for document in data
             ]
-
             # Use the helpers.bulk() method for bulk indexing
-            helpers.bulk(es, actions)
-            response = {"message":"Index created successfully!"}
-            return jsonify([response])
+            # helpers.bulk(es, actions)
+            try:
+                # Use the helpers.bulk() method for bulk indexing
+                success, failed = helpers.bulk(es, actions, raise_on_error=False)
+                print(f"Successfully indexed: {success} documents")
+                print(f"Failed to index: {failed} documents")
+                
+                if failed:
+                    for item in failed:
+                        print(f"Indexing error: {item['index']['error']}")
+            except Exception as e:
+                print(f"Error during bulk indexing: {e}")
+            # response = {"message":"Index created successfully!"}
+            # return jsonify([response])
     except Exception as e:
 
         return str(e)
@@ -106,4 +118,4 @@ def make_file_index():
      
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5001)
