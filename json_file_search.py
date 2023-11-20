@@ -63,7 +63,7 @@ def make_file_index():
         return jsonify({'error': 'No file part'})
 
     file = request.files['file']
-    filename = file.filename
+    filename = file.filename.lower()
 
     # Check if the file is not empty
     if filename == '':
