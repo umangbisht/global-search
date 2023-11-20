@@ -28,20 +28,50 @@ def get_search_data():
     index_list = list(all_indices)
     print("indices", index_list)
 
+    partial_number_query = {
+        "wildcard": {
+            "Mobile.keyword": "*" + search_query
+        }
+    }
+
     # Generate the search query
     query = {
-        "_source":[],
-        "min_score":0.5,
+        "_source": [],
+        "min_score": 0.5,
         "size": 500,
         "query": {
-            "multi_match": {
-                "query": search_query,
-                "type": "phrase",
-             
+            "bool": {
+                "should": [
+                    {
+                        "query_string": {
+                        "query": f"*{search_query}* OR {search_query}*",
+                        "fields": ["*"]
+                    }
+                        # "multi_match": {
+                        #     "query": search_query,
+                        #     "type": "phrase",
+                        
+                        # }
+                    },
+                  
+                ]
             }
-        },
-        
+        }
     }
+    # query = {
+    #     "_source":[],
+    #     "min_score":0.5,
+    #     "size": 500,
+    #     "query": {
+    #         "multi_match": {
+    #             "query": search_query,
+    #             "type": "phrase",
+             
+    #         }
+    #     },
+    #     # "query":partial_number_query,
+        
+    # }
     # Print the query for debugging
 
     # Execute the search
