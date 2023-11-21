@@ -2,6 +2,7 @@ from elasticsearch import Elasticsearch, helpers
 import json
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+import requests
 # from elasticsearch.helpers import bulk
 
 app = Flask(__name__)
@@ -102,10 +103,29 @@ def make_file_index():
     if filename == '':
         return jsonify({'error': 'No selected file'})
     print("index exists?",es.indices.exists(index=filename))
-    if es.indices.exists(index=filename):
-        print("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu")
-        response = {"message": f"Index '{filename}' already exists."}
+    url = f"http://localhost:9200/{filename}"
+    try:
+        response = requests.head(url, timeout=1)
+        if response.status_code == 200:
+            print("Index exists")
+            response = {"message": f"Index '{filename}' already exists."}
+            return jsonify([response])
+        elif response.status_code == 404:
+            print("Index does not exist")
+            response = {"message": f"Index '{filename}' already exists."}
+            return jsonify([response])
+        else:
+            print(f"Unexpected status code: {response.status_code}")
+            response = {"message": f"Unexpected status code: {response.status_code}"}
+            return jsonify([response])
+    except requests.RequestException as e:
+        print(f"Request error: {e}")
+        response = {"message": f"Request error: {e}"}
         return jsonify([response])
+    # if es.indices.exists(index=filename):
+    #     print("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu")
+    #     response = {"message": f"Index '{filename}' already exists."}
+    #     return jsonify([response])
 
     # Save the uploaded file to a designated folder
     file.save('./datastore/' + filename)
