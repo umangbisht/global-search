@@ -101,17 +101,16 @@ def make_file_index():
     # Check if the file is not empty
     if filename == '':
         return jsonify({'error': 'No selected file'})
-
-    
+    print("index exists?",es.indices.exists(index=filename))
+    if es.indices.exists(index=filename):
+        print("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu")
+        response = {"message": f"Index '{filename}' already exists."}
+        return jsonify([response])
 
     # Save the uploaded file to a designated folder
     file.save('./datastore/' + filename)
     print('./datastore/' + filename)
     print("file successfully saved")
-    if es.indices.exists(index=filename):
-        print("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu")
-        response = {"message": f"Index '{filename}' already exists."}
-        return jsonify([response])
     json_file_path = './datastore/'+filename
     # Check if the index already filename
     
