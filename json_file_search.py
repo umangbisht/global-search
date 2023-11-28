@@ -18,10 +18,11 @@ es = Elasticsearch([{"host": "localhost", "port": 9200, "scheme": "http"}], veri
 def get_search_data():
     # Get query parameters from the request
     search_query = request.args.get('data')
+    search_query_2 = request.args.get('must_not')
     print("search_query", search_query)
+    print("search_query_2222222222222222", search_query_2)
 
-    # Perform a simple full-text search for books with titles containing 'python'
-    search_query = search_query
+
     # Get all indices
     all_indices = es.indices.get_alias(index="*").keys()
 
@@ -29,23 +30,32 @@ def get_search_data():
     index_list = list(all_indices)
     print("indices", index_list)
 
-    partial_number_query = {
-        "wildcard": {
-            "Mobile.keyword": "*" + search_query
-        }
-    }
 
     # Generate the search query
     query = {
         "_source": [],
         "min_score": 0.5,
-        "size": 500,
+        "size": 10000,
         "query": {
             "bool": {
                 "should": [
                     {
                         "query_string": {
                         "query": f"*{search_query}* OR {search_query}*",
+                        "fields": ["*"]
+                    }
+                        # "multi_match": {
+                        #     "query": search_query,
+                        #     "type": "phrase",
+                        
+                        # }
+                    },
+                  
+                ],
+                "must_not": [
+                    {
+                        "query_string": {
+                        "query": f"*{search_query_2}* OR {search_query_2}*",
                         "fields": ["*"]
                     }
                         # "multi_match": {
@@ -103,28 +113,28 @@ def make_file_index():
     if filename == '':
         return jsonify({'error': 'No selected file'})
     print("index exists?",es.indices.exists(index=filename))
-    url = f"http://localhost:9200/{filename}"
-    try:
-        response = requests.head(url, timeout=1)
-        if response.status_code == 200:
-            print("Index exists")
-            response = {"message": f"Index '{filename}' already exists."}
-            return jsonify([response])
-        elif response.status_code == 404:
-            print("Index does not exist")
-            response = {"message": f"Index '{filename}' already exists."}
-            return jsonify([response])
-        else:
-            print(f"Unexpected status code: {response.status_code}")
-            response = {"message": f"Unexpected status code: {response.status_code}"}
-            return jsonify([response])
-    except requests.RequestException as e:
-        print(f"Request error: {e}")
-        response = {"message": f"Request error: {e}"}
-        return jsonify([response])
-    # if es.indices.exists(index=filename):
-    #     print("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu")
-    #     response = {"message": f"Index '{filename}' already exists."}
+    # url = f"http://localhost:9200/{filename}"
+    # try:
+    #     response = requests.head(url, timeout=1)
+    #     if response.status_code == 200:
+    #         print("Index exists")
+    #         response = {"message": f"Index '{filename}' already exists."}
+    #         return jsonify([response])
+    #     elif response.status_code == 404:
+    #         print("Index does not exist")
+    #         response = {"message": f"Index '{filename}' already exists."}
+    #         return jsonify([response])
+    #     else:
+    #         print(f"Unexpected status code: {response.status_code}")
+    #         response = {"message": f"Unexpected status code: {response.status_code}"}
+    #         return jsonify([response])
+    # except requests.RequestException as e:
+    #     print(f"Request error: {e}")
+    #     response = {"message": f"Request error: {e}"}
+    #     return jsonify([response])
+    if es.indices.exists(index=filename):
+        print("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu")
+        response = {"message": f"Index '{filename}' already exists."}
     #     return jsonify([response])
 
     # Save the uploaded file to a designated folder
