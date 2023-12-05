@@ -18,10 +18,8 @@ es = Elasticsearch([{"host": "localhost", "port": 9200, "scheme": "http"}], veri
 def get_search_data():
     # Get query parameters from the request
     search_query = request.args.get('data')
-    search_query_2 = request.args.get('must_not')
+    # search_query_2 = request.args.get('must_not')
     print("search_query", search_query)
-    print("search_query_2222222222222222", search_query_2)
-
 
     # Get all indices
     all_indices = es.indices.get_alias(index="*").keys()
@@ -52,38 +50,29 @@ def get_search_data():
                     },
                   
                 ],
-                "must_not": [
+                
+            },
+            "bool": {
+                "should": [
                     {
-                        "query_string": {
-                        "query": f"*{search_query_2}* OR {search_query_2}*",
-                        "fields": ["*"]
-                    }
-                        # "multi_match": {
-                        #     "query": search_query,
-                        #     "type": "phrase",
+                    #     "query_string": {
+                    #     "query": f"*{search_query}* OR {search_query}*",
+                    #     "fields": ["*"]
+                    # }
+                        "multi_match": {
+                            "query": search_query,
+                            "type": "phrase",
                         
-                        # }
+                        }
                     },
                   
-                ]
+                ],
+                
             }
         }
     }
-    # query = {
-    #     "_source":[],
-    #     "min_score":0.5,
-    #     "size": 500,
-    #     "query": {
-    #         "multi_match": {
-    #             "query": search_query,
-    #             "type": "phrase",
-             
-    #         }
-    #     },
-    #     # "query":partial_number_query,
-        
-    # }
-    # Print the query for debugging
+
+ 
 
     # Execute the search
     response = es.search(index=index_list, body=query)
@@ -102,17 +91,25 @@ def get_search_data():
     
 @app.route('/indexing-file', methods=['POST'])
 def make_file_index():
+    FILE_TO_CONVERT = ['csv','txt']
     # Check if the post request has the file part
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'})
 
     file = request.files['file']
     filename = file.filename.lower()
+    filename = filename.replace(" ", "")
+    # Split from the last dot
+    split_result = filename.rsplit('.', 1)
+
+    print("split_result", split_result)
 
     # Check if the file is not empty
     if filename == '':
         return jsonify({'error': 'No selected file'})
-    print("index exists?",es.indices.exists(index=filename))
+    
+
+
     # url = f"http://localhost:9200/{filename}"
     # try:
     #     response = requests.head(url, timeout=1)
@@ -135,7 +132,8 @@ def make_file_index():
     if es.indices.exists(index=filename):
         print("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu")
         response = {"message": f"Index '{filename}' already exists."}
-    #     return jsonify([response])
+        return jsonify([response])
+    
 
     # Save the uploaded file to a designated folder
     file.save('./datastore/' + filename)
@@ -160,14 +158,19 @@ def make_file_index():
                 }
                 for document in data
             ]
-            # Use the helpers.bulk() method for bulk indexing
-            # helpers.bulk(es, actions)
+
             try:
                 # Use the helpers.bulk() method for bulk indexing
-                success, failed = helpers.bulk(es, actions, raise_on_error=False)
+                success, failed = helpers.bulk(es, actions,index=filename, raise_on_error=True)
                 print(f"Successfully indexed: {success} documents")
                 print(f"Failed to index: {failed} documents")
                 response = {"message": f"Successfully indexed: {success} documents"}
+                # Print the details of failed documents
+                for idx, document in enumerate(data):
+                    # success, failed = helpers.bulk(es, [document], raise_on_error=False)
+                    if failed:
+                        print(f"Failed to index document at index {idx}: {failed[0]['index']['error']}")
+                print("999999999999999999999999999999999999999999999999999")
                 return jsonify([response])
                 
                 # if failed:
@@ -177,6 +180,11 @@ def make_file_index():
                         
             except Exception as e:
                 print(f"Error during bulk indexing: {e}")
+                response = {"message": f"Error during bulk indexing: {e}"}
+                # Print the failed documents for more details
+                print("data")
+
+                return jsonify([response])
     except Exception as e:
 
         return str(e)
