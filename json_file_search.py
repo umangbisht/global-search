@@ -120,7 +120,7 @@ def make_file_index():
     if filename == '':
         return jsonify({'error': 'No selected file'})
     filename = filename.replace(" ", "").replace(',', '').replace('_', '').replace("'", "")
-    print("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",filename)
+
     # Split from the last dot
     file_extension = filename.rsplit('.', 1)[1]
 
@@ -214,13 +214,14 @@ def make_file_index():
     # print("file successfully saved")
     else:
         json_file_path = './datastore/'+filename
-        print("json_file_path", json_file_path)
+        
         # Save the uploaded file to a designated folder
         file.save(json_file_path)
     # Check if the index already filename
     
     # Indexing JSON data
     try:
+        print("ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo")
         with open(json_file_path, 'r') as json_file:
             data = json.load(json_file)
         #     # Index each document from the JSON file
@@ -235,6 +236,8 @@ def make_file_index():
                 for document in data
             ]
 
+            print("444444444444444444444444444444444444444444444444444444444444444444444444444",filename)
+
             try:
                 # Use the helpers.bulk() method for bulk indexing
                 success, failed = helpers.bulk(es, actions,index=filename, raise_on_error=True)
@@ -245,6 +248,7 @@ def make_file_index():
                     # success, failed = helpers.bulk(es, [document], raise_on_error=False)
                     if failed:
                         print(f"Failed to index document at index {idx}: {failed[0]['index']['error']}")
+                print("3333333333333333333333333333333333333333333333333333333333333", response)
 
                 return jsonify([response])
                 
@@ -254,12 +258,13 @@ def make_file_index():
                 #         return jsonify([response])
                         
             except Exception as e:
+                print("Error during bulk indexing1111111111111111111111: {e}")
                 response = {"message": f"Error during bulk indexing: {e}"}
                 # Print the failed documents for more details
 
                 return jsonify([response])
     except Exception as e:
-
+        print("222222222222222222222222222222222222222222222222222222222222222222222",str(e))
         return str(e)
     
 
