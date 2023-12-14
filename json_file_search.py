@@ -169,6 +169,9 @@ def make_file_index():
             filename = filename+'.json'
 
             save_json_to_file(json_data, './datastore/' + filename)
+            if es.indices.exists(index=filename):
+                response = {"message": f"Index '{filename}' already exists."}
+                return jsonify([response])
             json_file_path = './datastore/'+filename
 
         elif file_format in FILE_TO_CONVERT and file_format == 'xlsx':
@@ -183,6 +186,9 @@ def make_file_index():
             print('./datastore/' + filename)
 
             save_json_to_file(json_data, './datastore/' + filename)
+            if es.indices.exists(index=filename):
+                response = {"message": f"Index '{filename}' already exists."}
+                return jsonify([response])
             json_file_path = './datastore/'+filename
 
             # # CSV file path
@@ -222,6 +228,7 @@ def make_file_index():
     # Indexing JSON data
     try:
         print("ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo")
+        print(json_file_path)
         with open(json_file_path, 'r') as json_file:
             data = json.load(json_file)
         #     # Index each document from the JSON file
@@ -260,6 +267,9 @@ def make_file_index():
             except Exception as e:
                 print("Error during bulk indexing1111111111111111111111: {e}")
                 response = {"message": f"Error during bulk indexing: {e}"}
+                # Print the failed documents for more details
+                for idx, document in enumerate(data):
+                    print(f"Failed document at index {idx}: {document}")
                 # Print the failed documents for more details
 
                 return jsonify([response])
