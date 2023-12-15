@@ -244,6 +244,7 @@ def make_file_index():
             ]
 
             print("444444444444444444444444444444444444444444444444444444444444444444444444444",filename)
+            failed = None
 
             try:
                 # Use the helpers.bulk() method for bulk indexing
@@ -251,10 +252,11 @@ def make_file_index():
 
                 response = {"message": f"Successfully indexed: {success} documents"}
                 # Print the details of failed documents
-                for idx, document in enumerate(data):
-                    # success, failed = helpers.bulk(es, [document], raise_on_error=False)
-                    if failed:
-                        print(f"Failed to index document at index {idx}: {failed[0]['index']['error']}")
+                # Print the details of failed documents
+                for idx, (document, error) in enumerate(zip(data, failed)):
+                    if error:
+                        print(f"Failed to index document at index {idx}: {error['index']['error']}")
+                        print("Failed Document Details:", document)
                 print("3333333333333333333333333333333333333333333333333333333333333", response)
 
                 return jsonify([response])
@@ -268,9 +270,9 @@ def make_file_index():
                 print("Error during bulk indexing1111111111111111111111: {e}")
                 response = {"message": f"Error during bulk indexing: {e}"}
                 # Print the failed documents for more details
-                # Print the failed documents for more details
-                for idx, (document, error) in enumerate(zip(data, failed)):
-                    if error:
+                print("failed",failed)
+                if failed is not None:
+                    for idx, (document, error) in enumerate(zip(data, failed)):
                         print(f"Failed to index document at index {idx}: {error['index']['error']}")
                         print("Failed Document Details:", document)
                 # Print the failed documents for more details
