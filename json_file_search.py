@@ -268,8 +268,11 @@ def make_file_index():
                 print("Error during bulk indexing1111111111111111111111: {e}")
                 response = {"message": f"Error during bulk indexing: {e}"}
                 # Print the failed documents for more details
-                for idx, document in enumerate(data):
-                    print(f"Failed document at index {idx}: {document}")
+                # Print the failed documents for more details
+                for idx, (document, error) in enumerate(zip(data, failed)):
+                    if error:
+                        print(f"Failed to index document at index {idx}: {error['index']['error']}")
+                        print("Failed Document Details:", document)
                 # Print the failed documents for more details
 
                 return jsonify([response])
