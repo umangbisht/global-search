@@ -20,12 +20,12 @@ es = Elasticsearch([{"host": "localhost", "port": 9200, "scheme": "http"}], veri
 
 
 
-@app.route('/search-file', methods=['POST'])
+@app.route('/search-file', methods=['GET'])
 def get_search_data():
     # Get query parameters from the request
-    search_query = request.json.get('data')
+    search_query = request.args.get('data')
     # search_query_2 = request.args.get('must_not')
-    print("search_queryyyyyyyyyyyyyyyyyyyyyyyyyyyyy", search_query)
+    print("search_query", search_query)
 
     # Get all indices
     all_indices = es.indices.get_alias(index="*").keys()
@@ -68,7 +68,7 @@ def get_search_data():
  
 
     # Execute the search
-    response = es.search(index=index_list,method='POST', body=query)
+    response = es.search(index=index_list, body=query)
 
     # Process the search results
     hits = response['hits']['hits']
