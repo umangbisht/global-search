@@ -7,6 +7,8 @@ import csv
 from io import StringIO
 import pandas as pd
 from io import BytesIO
+from elasticsearch.helpers import BulkIndexError
+import re
 # from elasticsearch.helpers import bulk
 
 app = Flask(__name__)
@@ -18,7 +20,7 @@ es = Elasticsearch([{"host": "localhost", "port": 9200, "scheme": "http"}], veri
 
 
 
-@app.route('/search-file', methods=['GET'])
+@app.route('/search-file', methods=['POST'])
 def get_search_data():
     # Get query parameters from the request
     search_query = request.args.get('data')
@@ -35,9 +37,8 @@ def get_search_data():
 
     # Generate the search query
     query = {
-        "_source": [],
         "min_score": 0.5,
-        "size": 10000,
+        "size": 100000,
         "query": {
             "bool": {
                 "should": [
@@ -47,11 +48,6 @@ def get_search_data():
                             "type": "phrase",
                         
                         }
-                        # "multi_match": {
-                        #     "query": search_query,
-                        #     "type": "phrase",
-                        
-                        # }
                     },
                   
                 ],
@@ -64,34 +60,15 @@ def get_search_data():
 
                     },
                   
-                ],
-                
-                
+                ],  
             },
-            # "bool": {
-            #     "must": [
-            #         {
-            #         #     "query_string": {
-            #         #     "query": f"*{search_query}* OR {search_query}*",
-            #         #     "fields": ["*"]
-            #         # }
-            #             "multi_match": {
-            #                 "query": search_query,
-            #                 "type": "phrase",
-                        
-            #             }
-            #         },
-                  
-            #     ],
-                
-            # }
         }
     }
 
  
 
     # Execute the search
-    response = es.search(index=index_list, body=query)
+    response = es.search(index=index_list,method='POST', body=query)
 
     # Process the search results
     hits = response['hits']['hits']
@@ -104,6 +81,11 @@ def get_search_data():
     else:
         # Return an empty list if no hits
         return jsonify([])
+
+def clean_phone_number(phone_number):
+    cleaned_phone_num = re.sub(r'\D', '', phone_number)
+    cleaned_phone_num = re.sub(r'^91', '', cleaned_phone_num)
+    return cleaned_phone_num   
     
 @app.route('/indexing-file', methods=['POST'])
 def make_file_index():
@@ -124,34 +106,6 @@ def make_file_index():
     # Split from the last dot
     file_extension = filename.rsplit('.', 1)[1]
 
-
-
-    
-    
-    
-
-    
-
-
-    # url = f"http://localhost:9200/{filename}"
-    # try:
-    #     response = requests.head(url, timeout=1)
-    #     if response.status_code == 200:
-    #         print("Index exists")
-    #         response = {"message": f"Index '{filename}' already exists."}
-    #         return jsonify([response])
-    #     elif response.status_code == 404:
-    #         print("Index does not exist")
-    #         response = {"message": f"Index '{filename}' already exists."}
-    #         return jsonify([response])
-    #     else:
-    #         print(f"Unexpected status code: {response.status_code}")
-    #         response = {"message": f"Unexpected status code: {response.status_code}"}
-    #         return jsonify([response])
-    # except requests.RequestException as e:
-    #     print(f"Request error: {e}")
-    #     response = {"message": f"Request error: {e}"}
-    #     return jsonify([response])
     if es.indices.exists(index=filename):
         response = {"message": f"Index '{filename}' already exists."}
         return jsonify([response])
@@ -177,13 +131,9 @@ def make_file_index():
         elif file_format in FILE_TO_CONVERT and file_format == 'xlsx':
             # Process the file and convert to JSON
             json_data = convert_excel_to_json(file)
-            print("json_data json_data", json_data)
             # Save JSON data to a file
-
             filename = filename.rsplit('.', 1)[0]
-
             filename = filename+'.json'
-            print('./datastore/' + filename)
 
             save_json_to_file(json_data, './datastore/' + filename)
             if es.indices.exists(index=filename):
@@ -191,96 +141,69 @@ def make_file_index():
                 return jsonify([response])
             json_file_path = './datastore/'+filename
 
-            # # CSV file path
-            # csv_file_path = '../datastore/Telegram/linkedin_united kingdom_0.csv'
-
-            # # JSON file path (where you want to save the converted JSON data)
-            # json_file_path = '../json/linkedin_united kingdom_0.json'
-
-            
-
-            # Open the CSV file for reading
-            # with open(csv_file_path, 'r') as csv_file:
-            #     # Create a CSV reader
-            #     csv_reader = csv.DictReader(csv_file)
-                
-            #     # Convert CSV data to a list of dictionaries
-            #     data = [row for row in csv_reader if any(row.values())]
-            #     print("data", data)
-
-            # # Write the JSON data to a file
-            # with open(json_file_path, 'w') as json_file:
-            #     # Use the json module to dump the data to JSON format
-            #     json.dump(data, json_file, indent=2)
-        
-
-    # Save the uploaded file to a designated folder
-    # file.save('./datastore/' + filename)
-    # print('./datastore/' + filename)
-    # print("file successfully saved")
     else:
         json_file_path = './datastore/'+filename
         
         # Save the uploaded file to a designated folder
         file.save(json_file_path)
     # Check if the index already filename
+    print("filesuccessfully saved!!!!!!")
     
     # Indexing JSON data
     try:
-        print("ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo")
-        print(json_file_path)
+        # Load data from the JSON file
         with open(json_file_path, 'r') as json_file:
             data = json.load(json_file)
-        #     # Index each document from the JSON file
-        #     for idx, document in enumerate(data):
-        #         es.index(index=filename, body=document, id=idx)
-            actions = [
-                {
-                    "_op_type":"index",
-                    "_index": filename,
-                    "_source": document,
-                }
-                for document in data
-            ]
 
-            print("444444444444444444444444444444444444444444444444444444444444444444444444444",filename)
-            failed = None
+        # Create the actions list outside the loop
+        actions = [
+            {
+                "_op_type": "index",
+                "_index": filename,
+                "_source": document,
+            }
+            for document in data
+        ]
 
-            try:
-                # Use the helpers.bulk() method for bulk indexing
-                success, failed = helpers.bulk(es, actions,index=filename, raise_on_error=True)
+        # Loop through the data to modify "Mobile" values and perform bulk indexing
+        for idx, document in enumerate(data):
+            for key, value in document.items():
+                # Check if the key contains the string "Mobile"
+                if "Mobile" in key or "mobile" in key or "phone" in key:
+                    # Convert the corresponding value to a string
+                    value = str(value)
+                    # Assign the updated value back to the key in the document dictionary
+                    document[key] = value
+                    # Optionally, call the clean_phone_number function
+                    value = clean_phone_number(value)
+                    print("Modified document:", document)
 
-                response = {"message": f"Successfully indexed: {success} documents"}
-                # Print the details of failed documents
-                # Print the details of failed documents
-                for idx, (document, error) in enumerate(zip(data, failed)):
-                    if error:
-                        print(f"Failed to index document at index {idx}: {error['index']['error']}")
-                        print("Failed Document Details:", document)
-                print("3333333333333333333333333333333333333333333333333333333333333", response)
+        # Use the helpers.bulk() method for bulk indexing
+        success, failed = helpers.bulk(es, actions, index=filename, raise_on_error=True)
+        response = {"message": f"Successfully indexed: {success} documents"}
 
-                return jsonify([response])
-                
-                # if failed:
-                #     for item in failed:
-                #         response = {"message": f"Indexing error: {item['index']['error']}"}
-                #         return jsonify([response])
-                        
-            except Exception as e:
-                print("Error during bulk indexing1111111111111111111111: {e}")
-                response = {"message": f"Error during bulk indexing: {e}"}
-                # Print the failed documents for more details
-                print("failed",failed)
-                if failed is not None:
-                    for idx, (document, error) in enumerate(zip(data, failed)):
-                        print(f"Failed to index document at index {idx}: {error['index']['error']}")
-                        print("Failed Document Details:", document)
-                # Print the failed documents for more details
+        # Print the details of failed documents
+        for idx, document in enumerate(data):
+            if failed:
+                print(f"Failed to index document at index {idx}: {failed[0]['index']['error']}")
 
-                return jsonify([response])
-    except Exception as e:
-        print("222222222222222222222222222222222222222222222222222222222222222222222",str(e))
-        return str(e)
+        return jsonify([response])
+
+    except BulkIndexError as e_bulk:
+        response = {"message": f"Error during bulk indexing: {e_bulk}"}
+
+        # Get the details of failed documents from the BulkIndexError
+        failed_items = e_bulk.errors
+        print("Failed items:", failed_items)
+        if failed_items:
+            for idx, failed_item in enumerate(failed_items):
+                if 'index' in failed_item and 'error' in failed_item['index']:
+                    error_message = failed_item['index']['error']['reason']
+                    print(f"Failed to index document at index {idx}: {error_message}")
+                else:
+                    print(f"Failed to index document at index {idx}: Unknown error")
+
+        return jsonify([response])
     
 
 def convert_csv_to_json(file):
