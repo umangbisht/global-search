@@ -38,7 +38,7 @@ def get_search_data():
     # Generate the search query
     query = {
         "min_score": 0.5,
-        "size": 100000,
+        "size": 10000,
         "query": {
             "bool": {
                 "should": [
